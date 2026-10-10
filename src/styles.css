@@ -1,0 +1,463 @@
+:root {
+  --bg: #15171c;
+  --surface: #1c1f26;
+  --surface-2: #252932;
+  --border: #2f343f;
+  --text: #e6e8ec;
+  --text-muted: #8b919e;
+  --accent: #4f8cff;
+
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Layout */
+.app {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+.panel {
+  overflow: hidden;
+}
+
+/* The splitter sets an inline overflow: hidden on panels, so scrolling lives on the content inside. */
+.panel--params {
+  background: var(--surface);
+}
+
+.resize-trigger {
+  flex: 0 0 4px;
+  min-width: 4px;
+  padding: 0;
+  border: none;
+  background: var(--border);
+  cursor: col-resize;
+  transition: background 120ms;
+}
+
+.resize-trigger:hover,
+.resize-trigger[data-focus],
+.resize-trigger[data-dragging] {
+  background: var(--accent);
+  outline: none;
+}
+
+/* Viewport */
+.viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.viewport__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.viewport__canvas canvas {
+  display: block;
+}
+
+.viewport__overlay {
+  position: absolute;
+}
+
+.viewport__overlay--top-left {
+  top: 12px;
+  left: 12px;
+}
+
+.viewport__overlay--bottom-center {
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 32px);
+}
+
+.viewport__overlay .warnings {
+  background: color-mix(in srgb, #2e2617 92%, transparent);
+  backdrop-filter: blur(6px);
+  font-size: 13px;
+}
+
+/* Segmented control */
+.segmented {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.segmented__track {
+  position: relative;
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.segmented--overlay .segmented__track {
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.segmented__indicator {
+  width: var(--width);
+  height: var(--height);
+  top: var(--top);
+  border-radius: 5px;
+  background: var(--accent);
+  transition: left 150ms ease, width 150ms ease;
+}
+
+.segmented__item {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 36px;
+  padding: 4px 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.segmented__item:hover {
+  color: var(--text);
+}
+
+.segmented__item[data-state='checked'] {
+  color: #fff;
+}
+
+.segmented__item[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 5px;
+}
+
+/* Parameters panel */
+.params {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tabs__list {
+  position: relative;
+  display: flex;
+  flex: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs__trigger {
+  flex: 1;
+  padding: 10px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabs__trigger:hover,
+.tabs__trigger[data-selected] {
+  color: var(--text);
+}
+
+.tabs__trigger[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.tabs__indicator {
+  bottom: -1px;
+  width: var(--width);
+  height: 2px;
+  background: var(--accent);
+  transition: left 150ms ease, width 150ms ease;
+}
+
+/* Scrolling lives here so the tab bar stays visible. */
+.tabs__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.tabs__content[hidden] {
+  display: none;
+}
+
+.tabs__empty {
+  margin: 0;
+  padding: 16px;
+  color: var(--text-muted);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.params__header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.params__header h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.params__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.params__section h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.params__footer {
+  margin-top: auto;
+  padding: 16px;
+}
+
+/* Number field */
+.number-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.number-field__label {
+  display: flex;
+  justify-content: space-between;
+}
+
+.number-field__unit {
+  color: var(--text-muted);
+}
+
+.number-field__control {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.number-field__control:focus-within {
+  border-color: var(--accent);
+}
+
+.number-field__input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  outline: none;
+}
+
+.number-field__trigger {
+  width: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.number-field__trigger:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* Body type */
+.body-type {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.body-type__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.body-type__item:hover {
+  border-color: var(--text-muted);
+}
+
+.body-type__item[data-state='checked'] {
+  border-color: var(--accent);
+}
+
+.body-type__item[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.body-type__control {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border: 2px solid var(--text-muted);
+  border-radius: 50%;
+}
+
+.body-type__control[data-state='checked'] {
+  border-color: var(--accent);
+  background: radial-gradient(var(--accent) 0 3px, transparent 4px);
+}
+
+.body-type__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.body-type__label {
+  font-weight: 500;
+}
+
+.body-type__description {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Toggle field */
+.toggle-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.toggle-field__control {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  width: 32px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--border);
+  transition: background 120ms;
+}
+
+.toggle-field__control[data-state='checked'] {
+  background: var(--accent);
+}
+
+.toggle-field__control[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.toggle-field__thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 120ms;
+}
+
+.toggle-field__thumb[data-state='checked'] {
+  transform: translateX(14px);
+}
+
+/* Warnings */
+.warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 10px 10px 26px;
+  border: 1px solid #7a5a1e;
+  border-radius: 6px;
+  background: #2e2617;
+  color: #f0c674;
+  font-size: 12px;
+}
+
+/* Readout */
+.readout {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 4px;
+  color: var(--text-muted);
+}
+
+/* Buttons */
+.button {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button:hover {
+  border-color: var(--accent);
+}
