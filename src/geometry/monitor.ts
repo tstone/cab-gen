@@ -1,5 +1,5 @@
 import type { MonitorSpec, ProfileParams } from '../state/params';
-import type { SideProfile, Vec2 } from './sideProfile';
+import { type SideProfile, type Vec2, insidePolygon } from './sideProfile';
 
 /**
  * Monitor dimensions relative to how it's mounted: "along" runs up the screen
@@ -37,6 +37,8 @@ export interface MonitorPlacement {
   along: Vec2;
   /** Unit vector into the cabinet, perpendicular to the screen edge. */
   inward: Vec2;
+  /** Side outline of the monitor body, in profile coordinates. */
+  body: Vec2[];
   warnings: string[];
 }
 
@@ -102,17 +104,13 @@ export function placeMonitor(
     }
   }
 
-  return { size, faceCenter, along, inward, warnings };
-}
+  const half = size.outerAlong / 2;
+  const body = [
+    at(faceCenter, -half, 0),
+    at(faceCenter, half, 0),
+    at(faceCenter, half, size.depth),
+    at(faceCenter, -half, size.depth),
+  ];
 
-function insidePolygon(pt: Vec2, polygon: Vec2[]): boolean {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const a = polygon[i];
-    const b = polygon[j];
-    if (a.y > pt.y !== b.y > pt.y && pt.x < ((b.x - a.x) * (pt.y - a.y)) / (b.y - a.y) + a.x) {
-      inside = !inside;
-    }
-  }
-  return inside;
+  return { size, faceCenter, along, inward, body, warnings };
 }

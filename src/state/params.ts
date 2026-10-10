@@ -1,15 +1,131 @@
+import { createEffect, createRoot } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { inches } from './units';
 
 export type BodyType = 'bartop' | 'bartop-base' | 'full';
 
 export const bodyTypes: { value: BodyType; label: string; description: string }[] = [
-  { value: 'bartop', label: 'Bartop', description: 'Top half only, sits on a table or bar' },
-  { value: 'bartop-base', label: 'Bartop + Base', description: 'Bartop on a matching base, full height' },
+  { value: 'bartop', label: 'Bartop', description: 'Cut off below the control panel, sits on a table or bar' },
+  { value: 'bartop-base', label: 'Bartop + Base', description: 'Full size, split into a bartop and base below the control panel' },
   { value: 'full', label: 'Full Size', description: 'Single full-height cabinet' },
 ];
 
-export type AspectRatio = '4:3' | '5:4' | '16:10' | '16:9';
+export type ControlPanelType = 'integrated' | 'removable';
+
+export const controlPanelTypes: {
+  value: ControlPanelType;
+  label: string;
+  description: string;
+  disabled?: boolean;
+}[] = [
+  { value: 'integrated', label: 'Integrated', description: 'Fits between the side panels, resting on the control panel mount' },
+  { value: 'removable', label: 'Removable', description: 'A separate assembly that sits on the cabinet (coming soon)', disabled: true },
+];
+
+/** Lengths in millimeters. */
+export interface ControlPanelParams {
+  type: ControlPanelType;
+  /**
+   * Moves the back edge along the panel's slope, measured from the back of the
+   * control panel mount in the side profile; positive extends further back.
+   */
+  backOffset: number;
+  /** Clear sheet over the panel, between the side panels and flush with their edge. */
+  acrylic: { enabled: boolean; thickness: number };
+}
+
+export type PlayerCount = 1 | 2 | 3 | 4;
+
+export const playerCounts: PlayerCount[] = [1, 2, 3, 4];
+
+export type ButtonCount = 2 | 3 | 4;
+
+export const buttonCounts: ButtonCount[] = [2, 3, 4];
+
+export type ButtonArrangement = 'line' | 'slanted' | 'arced';
+
+export const buttonArrangements: { value: ButtonArrangement; label: string }[] = [
+  { value: 'line', label: 'Line' },
+  { value: 'slanted', label: 'Slanted' },
+  { value: 'arced', label: 'Arced' },
+];
+
+/** Standard arcade button sizes, which are also their mounting hole diameters (mm). */
+export type ButtonSize = 24 | 30;
+
+export const buttonSizes: ButtonSize[] = [24, 30];
+
+/** A single row of buttons to the right of the stick. Lengths in millimeters, angles in degrees. */
+export interface GenericPlayArea {
+  buttons: ButtonCount;
+  /** From the stick's center to the first button's center. */
+  stickToButton: number;
+  /** Center to center between neighboring buttons. */
+  spacing: number;
+  arrangement: ButtonArrangement;
+  /** Rise of a slanted row from horizontal; positive goes away from the player. */
+  slant: number;
+  /** Radius of the circle an arced row follows. */
+  arcRadius: number;
+}
+
+export type PlayAreaPreset =
+  | 'capcom-sf'
+  | 'japanese'
+  | 'japanese-straight'
+  | 'moderate-transition'
+  | 'direct-slanted'
+  | 'shifted-7'
+  | 'shifted-8';
+
+export type PlayAreaMode = 'generic' | 'preset' | 'empty';
+
+export const playAreaModes: { value: PlayAreaMode; label: string; description: string }[] = [
+  { value: 'generic', label: 'Generic', description: 'Choose the button count, spacing and arrangement' },
+  { value: 'preset', label: 'Preset', description: 'Dimensions taken from a real arcade machine' },
+  { value: 'empty', label: 'Empty', description: 'A blank panel, for cutting your own custom layout' },
+];
+
+export interface PlayAreaSetup {
+  mode: PlayAreaMode;
+  generic: GenericPlayArea;
+  preset: PlayAreaPreset;
+}
+
+/**
+ * Where a player's play area sits on the panel's top surface. Lengths in millimeters.
+ * Players get equal slots across the panel and each play area is centered in its slot.
+ */
+export interface PlayAreaPosition {
+  /** Left/right shift from the center of the player's slot; positive moves to the players' right. */
+  x: number;
+  /** Distance along the panel from its front edge to the play area's center. */
+  y: number;
+}
+
+/** How the controls are arranged on the control panel. */
+export interface LayoutParams {
+  playerCount: PlayerCount;
+  /** Play area setup shared by players 1 and 2. */
+  main: PlayAreaSetup;
+  /** One per possible player, used for the first `playerCount`. */
+  positions: PlayAreaPosition[];
+  hardware: {
+    /** Diameter of the hole the joystick shaft passes through. */
+    stickHole: number;
+    buttonSize: ButtonSize;
+  };
+  /** One start button per player, in a row centered across the back of the panel. */
+  start: {
+    size: ButtonSize;
+    /** Center to center between neighboring start buttons. */
+    spacing: number;
+    /** Distance along the panel from its back edge to the row's center line. */
+    fromBack: number;
+  };
+}
+
+export type AspectRatio ='4:3' | '5:4' | '16:10' | '16:9';
 
 export const aspectRatios: AspectRatio[] = ['4:3', '5:4', '16:10', '16:9'];
 
@@ -27,15 +143,16 @@ export interface MonitorSpec {
   depth: number;
 }
 
-interface BoxDimensions {
-  height: number;
-  depth: number;
-}
-
-/** A cabinet side silhouette. Lengths in millimeters, angles in degrees. */
+/**
+ * A cabinet side silhouette. Lengths in millimeters, angles in degrees.
+ *
+ * Heights stack up from the floor: the control panel height, then the monitor
+ * opening above the control panel, then the marquee above that. The overall
+ * height follows from them.
+ */
 export interface ProfileParams {
-  /** Overall height, to the highest point of the marquee top. */
-  height: number;
+  /** Vertical height of the screen edge (the monitor opening), from its bottom to its top. */
+  monitorOpening: number;
   /** Depth of the lower body at the floor, back to lower front face. */
   depth: number;
   marquee: {
@@ -88,10 +205,11 @@ export interface ProfileParams {
     /** Slope of the underside from horizontal, dropping back toward the lower front. */
     undersideAngle: number;
   };
-  /** Angled cut at the bottom front corner. */
-  toeKick: { enabled: boolean; height: number; depth: number };
-  /** Angled cut at the bottom back corner. */
-  backKick: { enabled: boolean; height: number; depth: number };
+  /**
+   * How far below the lowest front point of the control panel the bartop is cut
+   * off. Bartops keep the part above the cut; a bartop + base keeps both parts.
+   */
+  bartopCut: number;
   /** Where the monitor sits relative to the screen edge of the profile. */
   monitor: {
     /** Slide along the screen edge from the center of the opening; positive moves up. */
@@ -109,15 +227,10 @@ export interface CabinetParams {
   /** Sheet goods thickness, used for every panel. */
   materialThickness: number;
   monitor: MonitorSpec;
-  /** Each body section keeps its own dimensions so switching types doesn't lose edits. */
-  full: ProfileParams;
-  bartop: ProfileParams;
-  base: BoxDimensions;
-}
-
-/** The profile section shown and edited for a body type. */
-export function profileKey(bodyType: BodyType): 'full' | 'bartop' {
-  return bodyType === 'full' ? 'full' : 'bartop';
+  /** Full-height side profile. Bartops are cut from it just below the control panel. */
+  profile: ProfileParams;
+  controlPanel: ControlPanelParams;
+  layout: LayoutParams;
 }
 
 // Defaults use round imperial sizes, since most cabinets are built from US plans and sheet goods.
@@ -134,8 +247,8 @@ export const defaultParams: CabinetParams = {
     depth: inches(2.5),
   },
   // Roughly a classic Atari upright.
-  full: {
-    height: inches(72),
+  profile: {
+    monitorOpening: inches(19),
     depth: inches(27),
     marquee: {
       height: inches(9),
@@ -164,60 +277,85 @@ export const defaultParams: CabinetParams = {
       thickness: inches(4),
       undersideAngle: 35,
     },
-    toeKick: { enabled: false, height: inches(4), depth: inches(3) },
-    backKick: { enabled: false, height: inches(4), depth: inches(3) },
+    bartopCut: inches(2),
     monitor: { offset: 0, recess: inches(1) },
   },
-  bartop: {
-    height: inches(28),
-    depth: inches(22),
-    marquee: {
-      height: inches(6),
-      depth: inches(6.5),
-      setback: inches(5),
-      topAngle: -10,
-      faceAngle: 10,
-      cornerRadius: 0,
-    },
-    rise: { enabled: true, height: inches(2.5), angle: 35 },
-    backSlope: 24,
-    monitorCut: {
-      enabled: true,
-      depth: inches(5),
-      topAngle: 30,
-      faceAngle: 15,
-      bottomAngle: 20,
-      topRadius: inches(0.75),
-      bottomRadius: inches(0.75),
-    },
-    controlPanel: {
-      height: inches(5.5),
-      depth: inches(5),
-      angle: 0,
-      overhang: 0,
-      thickness: inches(2),
-      undersideAngle: 30,
-    },
-    toeKick: { enabled: false, height: inches(2), depth: inches(2) },
-    backKick: { enabled: false, height: inches(2), depth: inches(2) },
-    monitor: { offset: 0, recess: inches(1) },
+  controlPanel: {
+    type: 'integrated',
+    backOffset: 0,
+    acrylic: { enabled: true, thickness: inches(1 / 8) },
   },
-  base: { height: inches(42), depth: inches(18) },
+  layout: {
+    playerCount: 2,
+    main: {
+      mode: 'preset',
+      generic: {
+        buttons: 3,
+        stickToButton: 95,
+        spacing: inches(1.5),
+        arrangement: 'line',
+        slant: 15,
+        arcRadius: inches(6),
+      },
+      preset: 'capcom-sf',
+    },
+    positions: Array.from({ length: 4 }, () => ({ x: 0, y: inches(3.5) })),
+    // Happ-style 1-1/8" stick hole and Sanwa-style 30mm buttons.
+    hardware: { stickHole: inches(1.125), buttonSize: 30 },
+    start: { size: 24, spacing: inches(1.5), fromBack: inches(1) },
+  },
 };
 
-/** Total height of the cabinet as currently configured. */
-export function overallHeight(p: CabinetParams): number {
-  switch (p.bodyType) {
-    case 'bartop':
-      return p.bartop.height;
-    case 'bartop-base':
-      return p.bartop.height + p.base.height;
-    case 'full':
-      return p.full.height;
+const STORAGE_KEY = 'cab-gen:params';
+
+/**
+ * Overlays `stored` onto `defaults`, keeping only values whose type matches the
+ * default's, so settings saved by an older version can't break the shape.
+ */
+function mergeStored<T>(defaults: T, stored: unknown): T {
+  if (Array.isArray(defaults)) {
+    if (!Array.isArray(stored)) return defaults;
+    return defaults.map((d, i) => mergeStored(d, stored[i])) as T;
   }
+  if (defaults !== null && typeof defaults === 'object') {
+    if (stored === null || typeof stored !== 'object' || Array.isArray(stored)) return defaults;
+    const merged = { ...defaults } as Record<string, unknown>;
+    for (const key of Object.keys(merged)) {
+      merged[key] = mergeStored(merged[key], (stored as Record<string, unknown>)[key]);
+    }
+    return merged as T;
+  }
+  if (typeof stored === 'number' && !Number.isFinite(stored)) return defaults;
+  return typeof stored === typeof defaults ? (stored as T) : defaults;
 }
 
-const [params, setParams] = createStore<CabinetParams>(structuredClone(defaultParams));
+function loadParams(): CabinetParams {
+  const defaults = structuredClone(defaultParams);
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return mergeStored(defaults, JSON.parse(stored));
+  } catch {
+    // Storage unavailable or unreadable; fall through to the defaults.
+  }
+  return defaults;
+}
+
+const [params, setParams] = createStore<CabinetParams>(loadParams());
+
+// Saves every change. Once the resets bring everything back to the defaults,
+// the saved copy is dropped.
+createRoot(() => {
+  const defaultsJson = JSON.stringify(defaultParams);
+  createEffect(() => {
+    const json = JSON.stringify(params);
+    try {
+      if (json === defaultsJson) localStorage.removeItem(STORAGE_KEY);
+      else localStorage.setItem(STORAGE_KEY, json);
+    } catch {
+      // Not persisted; the changes still apply for this session.
+    }
+  });
+});
 
 /** Restores the Settings tab values (material and monitor). */
 export function resetSettings() {
@@ -227,10 +365,30 @@ export function resetSettings() {
   });
 }
 
-/** Restores the Cabinet tab values (body type, dimensions and profiles). */
+/**
+ * Restores the Cabinet tab values (body type, dimensions and profiles). The
+ * control panel mount is edited on the Control Panel tab, so it's kept, apart
+ * from its height.
+ */
 export function resetCabinet() {
   const d = structuredClone(defaultParams);
-  setParams({ bodyType: d.bodyType, width: d.width, full: d.full, bartop: d.bartop, base: d.base });
+  const controlPanel = { ...params.profile.controlPanel, height: d.profile.controlPanel.height };
+  setParams({ bodyType: d.bodyType, width: d.width, profile: { ...d.profile, controlPanel } });
+}
+
+/** Restores the Control Panel tab values, including the mount in the side profile (but not its height). */
+export function resetControlPanel() {
+  const d = structuredClone(defaultParams);
+  setParams('controlPanel', d.controlPanel);
+  setParams('profile', 'controlPanel', {
+    ...d.profile.controlPanel,
+    height: params.profile.controlPanel.height,
+  });
+}
+
+/** Restores the Layout tab values. */
+export function resetLayout() {
+  setParams('layout', structuredClone(defaultParams.layout));
 }
 
 export { params, setParams };

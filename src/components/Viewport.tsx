@@ -1,10 +1,12 @@
 import { Show, createEffect, on, onCleanup, onMount } from 'solid-js';
 import { createScene } from '../scene/createScene';
-import { overallHeight, params } from '../state/params';
+import { params } from '../state/params';
 import UnitToggle from './UnitToggle';
 import Warnings from './Warnings';
 
 interface ViewportProps {
+  /** Overall cabinet height in millimeters, for framing the camera. */
+  height: number;
   /** Monitor fit problems, shown over the preview so they're visible from any tab. */
   monitorWarnings: string[];
 }
@@ -23,7 +25,7 @@ export default function Viewport(props: ViewportProps) {
     createEffect(
       on(
         () => params.bodyType,
-        () => scene.frameHeight(overallHeight(params) * 0.001),
+        () => scene.frameHeight(props.height * 0.001),
       ),
     );
 

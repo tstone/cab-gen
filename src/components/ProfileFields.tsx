@@ -6,7 +6,7 @@ import LengthReadout from './LengthReadout';
 import ToggleField from './ToggleField';
 import Warnings from './Warnings';
 import type { SideProfile } from '../geometry/sideProfile';
-import { type ProfileParams, params, profileKey, setParams } from '../state/params';
+import { type ProfileParams, params, setParams } from '../state/params';
 import { inches } from '../state/units';
 
 interface ProfileFieldsProps {
@@ -16,11 +16,10 @@ interface ProfileFieldsProps {
   monitorWarnings: string[];
 }
 
-/** Side-profile parameters for whichever profile the current body type uses. */
+/** Side-profile parameters, shared by every body type. */
 export default function ProfileFields(props: ProfileFieldsProps) {
-  const p = () => params[profileKey(params.bodyType)];
-  const update = (fn: (draft: ProfileParams) => void) =>
-    setParams(profileKey(params.bodyType), produce(fn));
+  const p = () => params.profile;
+  const update = (fn: (draft: ProfileParams) => void) => setParams('profile', produce(fn));
 
   return (
     <>
@@ -32,13 +31,6 @@ export default function ProfileFields(props: ProfileFieldsProps) {
 
       <section class="params__section">
         <h2>Marquee</h2>
-        <LengthField
-          label="Height"
-          value={p().marquee.height}
-          min={0}
-          max={inches(20)}
-          onChange={(v) => update((d) => void (d.marquee.height = v))}
-        />
         <LengthField
           label="Depth"
           value={p().marquee.depth}
@@ -186,100 +178,6 @@ export default function ProfileFields(props: ProfileFieldsProps) {
           Offset slides the monitor along the screen opening from its center. Recess is how far
           behind the opening the monitor face sits.
         </p>
-      </section>
-
-      <section class="params__section">
-        <h2>Control Panel Mount</h2>
-        <LengthField
-          label="Height"
-          value={p().controlPanel.height}
-          min={inches(1)}
-          max={inches(50)}
-          onChange={(v) => update((d) => void (d.controlPanel.height = v))}
-        />
-        <LengthField
-          label="Depth"
-          value={p().controlPanel.depth}
-          min={inches(1)}
-          max={inches(30)}
-          onChange={(v) => update((d) => void (d.controlPanel.depth = v))}
-        />
-        <AngleField
-          label="Angle"
-          value={p().controlPanel.angle}
-          min={-30}
-          max={45}
-          onChange={(v) => update((d) => void (d.controlPanel.angle = v))}
-        />
-        <LengthField
-          label="Overhang"
-          value={p().controlPanel.overhang}
-          min={0}
-          max={inches(20)}
-          onChange={(v) => update((d) => void (d.controlPanel.overhang = v))}
-        />
-        <Show when={p().controlPanel.overhang > 0}>
-          <LengthField
-            label="Front thickness"
-            value={p().controlPanel.thickness}
-            min={inches(0.5)}
-            max={inches(20)}
-            onChange={(v) => update((d) => void (d.controlPanel.thickness = v))}
-          />
-          <AngleField
-            label="Underside angle"
-            value={p().controlPanel.undersideAngle}
-            min={0}
-            max={75}
-            onChange={(v) => update((d) => void (d.controlPanel.undersideAngle = v))}
-          />
-        </Show>
-      </section>
-
-      <section class="params__section">
-        <h2>Bottom</h2>
-        <ToggleField
-          label="Toe kick"
-          checked={p().toeKick.enabled}
-          onChange={(v) => update((d) => void (d.toeKick.enabled = v))}
-        />
-        <Show when={p().toeKick.enabled}>
-          <LengthField
-            label="Toe kick height"
-            value={p().toeKick.height}
-            min={inches(0.25)}
-            max={inches(24)}
-            onChange={(v) => update((d) => void (d.toeKick.height = v))}
-          />
-          <LengthField
-            label="Toe kick depth"
-            value={p().toeKick.depth}
-            min={inches(0.25)}
-            max={inches(12)}
-            onChange={(v) => update((d) => void (d.toeKick.depth = v))}
-          />
-        </Show>
-        <ToggleField
-          label="Back kick"
-          checked={p().backKick.enabled}
-          onChange={(v) => update((d) => void (d.backKick.enabled = v))}
-        />
-        <Show when={p().backKick.enabled}>
-          <LengthField
-            label="Back kick height"
-            value={p().backKick.height}
-            min={inches(0.25)}
-            max={inches(24)}
-            onChange={(v) => update((d) => void (d.backKick.height = v))}
-          />
-          <LengthField
-            label="Back kick depth"
-            value={p().backKick.depth}
-            min={inches(0.25)}
-            max={inches(12)}
-            onChange={(v) => update((d) => void (d.backKick.depth = v))}
-          />
-        </Show>
       </section>
     </>
   );

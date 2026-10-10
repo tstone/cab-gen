@@ -223,12 +223,6 @@ body,
   display: none;
 }
 
-.tabs__empty {
-  margin: 0;
-  padding: 16px;
-  color: var(--text-muted);
-}
-
 .hint {
   margin: 0;
   font-size: 12px;
@@ -323,13 +317,14 @@ body,
 }
 
 /* Body type */
-.body-type {
+.choice-cards {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.body-type__item {
+.choice-cards__item {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -340,20 +335,29 @@ body,
   cursor: pointer;
 }
 
-.body-type__item:hover {
+.choice-cards__item:hover {
   border-color: var(--text-muted);
 }
 
-.body-type__item[data-state='checked'] {
+.choice-cards__item[data-state='checked'] {
   border-color: var(--accent);
 }
 
-.body-type__item[data-focus-visible] {
+.choice-cards__item[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.choice-cards__item[data-disabled]:hover {
+  border-color: var(--border);
+}
+
+.choice-cards__item[data-focus-visible] {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
-.body-type__control {
+.choice-cards__control {
   flex: none;
   width: 14px;
   height: 14px;
@@ -362,28 +366,99 @@ body,
   border-radius: 50%;
 }
 
-.body-type__control[data-state='checked'] {
+.choice-cards__control[data-state='checked'] {
   border-color: var(--accent);
   background: radial-gradient(var(--accent) 0 3px, transparent 4px);
 }
 
-.body-type__text {
+.choice-cards__text {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.body-type__label {
+.choice-cards__label {
   font-weight: 500;
 }
 
-.body-type__description {
+.choice-cards__description {
   font-size: 12px;
   color: var(--text-muted);
 }
 
+/* Select field */
+.select-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.select-field__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.select-field__trigger:hover {
+  border-color: var(--text-muted);
+}
+
+.select-field__trigger[data-focus-visible],
+.select-field__trigger[data-state='open'] {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.select-field__indicator {
+  color: var(--text-muted);
+}
+
+.select-field__content {
+  z-index: 10;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+  outline: none;
+}
+
+.select-field__content[hidden] {
+  display: none;
+}
+
+.select-field__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.select-field__item[data-highlighted] {
+  background: var(--border);
+}
+
+.select-field__item[data-state='checked'] {
+  color: var(--accent);
+}
+
 /* Toggle field */
+/* Anchors Ark's absolutely positioned hidden input here; otherwise it sits relative to
+   the body, and focusing it on click scrolls the whole page off-screen. */
 .toggle-field {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;

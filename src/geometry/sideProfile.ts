@@ -21,8 +21,12 @@ export interface SideProfile {
   backHeight: number;
   /** Front-to-back extent including anything that overhangs the lower front. */
   overallDepth: number;
+  /** Height where a bartop is cut off, just below the control panel. */
+  cutHeight: number;
   /** Ends of the screen edge before corner rounding: where the monitor opening is. */
   screen: { bottom: Vec2; top: Vec2 };
+  /** Ends of the control panel's top edge, front to back: where the control panel is mounted. */
+  controlPanel: { front: Vec2; back: Vec2 };
   /** Problems with the current parameters, in plain language. */
   warnings: string[];
 }
@@ -40,25 +44,46 @@ const EPSILON = 1e-6;
 /**
  * Computes a cabinet side silhouette from its parameters.
  *
- * Going counter-clockwise from the back-bottom corner: bottom, toe kick, lower
+ * Going counter-clockwise from the back-bottom corner: bottom, lower
  * front, control panel (underside, front, top), monitor cut (bottom line,
  * screen face, top line), marquee front and top, optional rise, back slope,
- * back, and back kick.
+ * and back.
  */
 export function sideProfile(p: ProfileParams): SideProfile {
   const warnings: string[] = [];
-  const { height: H, depth: D } = p;
+  const D = p.depth;
 
-  // Marquee: the higher end of its top sits at the overall height.
-  const m = p.marquee;
-  const topRise = m.depth * Math.tan(deg(m.topAngle));
-  const topFrontY = topRise >= 0 ? H : H + topRise;
-  const topFront: Vec2 = { x: D - m.setback, y: topFrontY };
-  const topBack: Vec2 = { x: topFront.x - m.depth, y: topFrontY - topRise };
-  const marqueeBottom: Vec2 = {
-    x: topFront.x - m.height * Math.tan(deg(m.faceAngle)),
-    y: topFront.y - m.height,
+  // Heights stack up from the floor: control panel, monitor opening, then marquee.
+  // Control panel: its top front edge sits at `height`, `overhang` past the lower front.
+  const cp = p.controlPanel;
+  const overhang = Math.max(0, cp.overhang);
+  const cpFront: Vec2 = { x: D + overhang, y: cp.height };
+  const cpBack: Vec2 = {
+    x: cpFront.x - cp.depth,
+    y: cp.height + cp.depth * Math.tan(deg(cp.angle)),
   };
+
+  // The marquee face's horizontal position doesn't depend on any height.
+  const m = p.marquee;
+  const marqueeBottomX = D - m.setback - m.height * Math.tan(deg(m.faceAngle));
+
+  // Monitor opening: rises from the control panel, and its top sets the marquee bottom.
+  const opening = Math.max(EPSILON, p.monitorOpening);
+  const cut = p.monitorCut.enabled ? monitorCut(p, cpBack, marqueeBottomX, opening, warnings) : null;
+  const marqueeBottom: Vec2 = cut
+    ? {
+        x: marqueeBottomX,
+        y: cut.top.y + (marqueeBottomX - cut.top.x) * Math.tan(deg(p.monitorCut.topAngle)),
+      }
+    : { x: marqueeBottomX, y: cpBack.y + opening };
+  if (marqueeBottom.y <= cpBack.y) {
+    warnings.push('The marquee bottom is below the control panel.');
+  }
+
+  // Marquee: its face rises `height` from the marquee bottom to the top front corner.
+  const topRise = m.depth * Math.tan(deg(m.topAngle));
+  const topFront: Vec2 = { x: D - m.setback, y: marqueeBottom.y + m.height };
+  const topBack: Vec2 = { x: topFront.x - m.depth, y: topFront.y - topRise };
 
   // Rise: a steep step down and back from the marquee top before the back slope begins.
   const riseBottom: Vec2 = p.rise.enabled
@@ -68,39 +93,19 @@ export function sideProfile(p: ProfileParams): SideProfile {
       }
     : topBack;
 
-  const backKick = p.backKick.enabled ? p.backKick : { height: 0, depth: 0 };
   let backHeight = riseBottom.y - riseBottom.x * Math.tan(deg(p.backSlope));
   if (riseBottom.x < -EPSILON) {
     warnings.push('The marquee and rise extend past the back of the cabinet.');
   }
-  if (backHeight < backKick.height) {
+  if (backHeight < 0) {
     warnings.push('The back slope is too steep to reach the back; the back panel height is clamped.');
-    backHeight = backKick.height;
+    backHeight = 0;
   }
 
-  // Control panel: its top front edge sits at `height`, `overhang` past the lower front.
-  const cp = p.controlPanel;
-  const overhang = Math.max(0, cp.overhang);
-  const cpFront: Vec2 = { x: D + overhang, y: cp.height };
-  const cpBack: Vec2 = {
-    x: cpFront.x - cp.depth,
-    y: cp.height + cp.depth * Math.tan(deg(cp.angle)),
-  };
-  if (marqueeBottom.y <= cpBack.y) {
-    warnings.push('The marquee bottom is below the control panel.');
-  }
-
+  // Lowest point of the control panel's front: where the underside meets the lower front, or the top edge if flush.
+  let cpLowest = cp.height;
   const corners: Corner[] = [];
-  corners.push({ p: { x: backKick.depth, y: 0 }, role: 'panel' });
-
-  if (p.toeKick.enabled) {
-    corners.push(
-      { p: { x: D - p.toeKick.depth, y: 0 }, role: 'panel' },
-      { p: { x: D, y: p.toeKick.height }, role: 'panel' },
-    );
-  } else {
-    corners.push({ p: { x: D, y: 0 }, role: 'panel' });
-  }
+  corners.push({ p: { x: 0, y: 0 }, role: 'panel' }, { p: { x: D, y: 0 }, role: 'panel' });
 
   if (overhang > EPSILON) {
     // Box sticking out past the lower front: underside slopes back down to the lower front.
@@ -109,14 +114,14 @@ export function sideProfile(p: ProfileParams): SideProfile {
       x: D,
       y: underFront.y - overhang * Math.tan(deg(cp.undersideAngle)),
     };
-    if (underBack.y <= (p.toeKick.enabled ? p.toeKick.height : 0)) {
-      warnings.push('The control panel underside reaches the floor or toe kick.');
+    if (underBack.y <= 0) {
+      warnings.push('The control panel underside reaches the floor.');
     }
     corners.push({ p: underBack, role: 'panel' }, { p: underFront, role: 'panel' });
+    cpLowest = underBack.y;
   }
   corners.push({ p: cpFront, role: 'controlPanel' });
 
-  const cut = p.monitorCut.enabled ? monitorCut(p, marqueeBottom, cpBack, warnings) : null;
   if (cut) {
     corners.push(
       { p: cpBack, role: 'panel' },
@@ -135,7 +140,6 @@ export function sideProfile(p: ProfileParams): SideProfile {
   );
   if (p.rise.enabled) corners.push({ p: riseBottom, role: 'panel' });
   corners.push({ p: { x: 0, y: backHeight }, role: 'panel' });
-  if (p.backKick.enabled) corners.push({ p: { x: 0, y: backKick.height }, role: 'panel' });
 
   const { outline, roles } = expandCorners(corners);
   if (outline.some((pt) => pt.y < -EPSILON) || selfIntersects(outline)) {
@@ -143,46 +147,62 @@ export function sideProfile(p: ProfileParams): SideProfile {
   }
   const overallDepth = Math.max(...outline.map((pt) => pt.x)) - Math.min(0, ...outline.map((pt) => pt.x));
   const screen = cut ?? { bottom: cpBack, top: marqueeBottom };
-  return { outline, roles, backHeight, overallDepth, screen, warnings };
+  const cutHeight = Math.max(0, cpLowest - Math.max(0, p.bartopCut));
+  const controlPanel = { front: cpFront, back: cpBack };
+  return { outline, roles, backHeight, overallDepth, cutHeight, screen, controlPanel, warnings };
 }
 
 /**
- * Finds the two inner corners of the monitor cut. The top line runs back from
- * the marquee bottom; the screen face runs down from its end; the bottom line
- * runs back from the control panel. Returns null if they can't meet.
+ * Finds the two inner corners of the monitor cut, building up from the control
+ * panel. The bottom line runs back from the control panel's back edge to the
+ * screen face, which is placed so its top is `depth` behind the marquee face;
+ * the screen face then rises `opening` vertically.
  */
-function monitorCut(p: ProfileParams, marqueeBottom: Vec2, cpBack: Vec2, warnings: string[]) {
+function monitorCut(
+  p: ProfileParams,
+  cpBack: Vec2,
+  marqueeBottomX: number,
+  opening: number,
+  warnings: string[],
+) {
   const c = p.monitorCut;
-  const top: Vec2 = {
-    x: marqueeBottom.x - c.depth,
-    y: marqueeBottom.y - c.depth * Math.tan(deg(c.topAngle)),
-  };
+  const faceRun = opening * Math.tan(deg(c.faceAngle));
+  const topX = marqueeBottomX - c.depth;
+  const bottomX = topX + faceRun;
 
-  // Intersect the screen line (from `top`, leaning back by faceAngle) with the
-  // bottom line (from the control panel back edge, rising toward the back).
-  const u = { x: Math.sin(deg(c.faceAngle)), y: -Math.cos(deg(c.faceAngle)) };
-  const v = { x: -Math.cos(deg(c.bottomAngle)), y: Math.sin(deg(c.bottomAngle)) };
-  const d = { x: cpBack.x - top.x, y: cpBack.y - top.y };
-  const det = u.y * v.x - u.x * v.y;
-  const s = (d.y * v.x - d.x * v.y) / det;
-  const t = (u.x * d.y - u.y * d.x) / det;
+  // Length of the bottom line, from the control panel back to the screen face.
+  const t = (cpBack.x - bottomX) / Math.cos(deg(c.bottomAngle));
 
-  if (top.x <= 0) {
+  let bottom: Vec2;
+  let top: Vec2;
+  if (t < EPSILON) {
+    // The screen face would start in front of the control panel's back edge:
+    // run the screen straight up from it, with no bottom line. This is a
+    // legitimate style (e.g. Crystal Castles).
+    bottom = cpBack;
+    top = { x: cpBack.x - faceRun, y: cpBack.y + opening };
+  } else {
+    bottom = { x: bottomX, y: cpBack.y + t * Math.sin(deg(c.bottomAngle)) };
+    top = { x: topX, y: bottom.y + opening };
+  }
+
+  if (top.x <= 0 || bottom.x <= 0) {
     warnings.push('The monitor cut extends past the back of the cabinet.');
   }
-  if (top.y <= cpBack.y) {
-    warnings.push('The monitor cut top is below the control panel; showing no cut.');
-    return null;
-  }
+  return { top, bottom };
+}
 
-  // The screen reaches the control panel before meeting the bottom line (or
-  // never meets it): run the screen straight to the control panel's back edge,
-  // with no bottom line. This is a legitimate style (e.g. Crystal Castles).
-  if (!Number.isFinite(s) || s <= 0 || t < EPSILON) {
-    return { top, bottom: cpBack };
+/** Even-odd test for whether a point is inside a polygon. */
+export function insidePolygon(pt: Vec2, polygon: Vec2[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i];
+    const b = polygon[j];
+    if (a.y > pt.y !== b.y > pt.y && pt.x < ((b.x - a.x) * (pt.y - a.y)) / (b.y - a.y) + a.x) {
+      inside = !inside;
+    }
   }
-
-  return { top, bottom: { x: top.x + s * u.x, y: top.y + s * u.y } };
+  return inside;
 }
 
 /** True if any two non-adjacent edges of the closed outline cross. */

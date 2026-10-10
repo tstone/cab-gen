@@ -2,21 +2,37 @@ import { createMemo } from 'solid-js';
 import { Splitter } from '@ark-ui/solid/splitter';
 import ParametersPanel from './components/ParametersPanel';
 import Viewport from './components/Viewport';
+import { controlPanelLayout } from './geometry/controlPanel';
 import { placeMonitor } from './geometry/monitor';
+import { panelHoles } from './geometry/playArea';
+import { bodySections } from './geometry/sections';
 import { sideProfile } from './geometry/sideProfile';
-import { params, profileKey } from './state/params';
+import { params } from './state/params';
 
 export default function App() {
   // Derived once here so the panel and the preview share them.
-  const profile = createMemo(() => sideProfile(params[profileKey(params.bodyType)]));
-  const monitorWarnings = createMemo(
-    () =>
-      placeMonitor(
-        profile(),
-        params.monitor,
-        params[profileKey(params.bodyType)].monitor,
-        params.width - 2 * params.materialThickness,
-      ).warnings,
+  const profile = createMemo(() => sideProfile(params.profile));
+  const sections = createMemo(() => bodySections(profile(), params.bodyType));
+  const monitor = createMemo(() =>
+    placeMonitor(
+      profile(),
+      params.monitor,
+      params.profile.monitor,
+      params.width - 2 * params.materialThickness,
+    ),
+  );
+  const monitorWarnings = () => monitor().warnings;
+  const controlPanel = createMemo(() =>
+    controlPanelLayout(
+      profile(),
+      params.controlPanel,
+      params.width,
+      params.materialThickness,
+      monitor().body,
+    ),
+  );
+  const holes = createMemo(() =>
+    panelHoles(params.layout, controlPanel().width, controlPanel().depth),
   );
 
   return (
@@ -30,11 +46,17 @@ export default function App() {
       ]}
     >
       <Splitter.Panel id="params" class="panel panel--params">
-        <ParametersPanel profile={profile()} monitorWarnings={monitorWarnings()} />
+        <ParametersPanel
+          profile={profile()}
+          sections={sections()}
+          monitorWarnings={monitorWarnings()}
+          controlPanel={controlPanel()}
+          layoutWarnings={holes().warnings}
+        />
       </Splitter.Panel>
       <Splitter.ResizeTrigger id="params:viewport" class="resize-trigger" aria-label="Resize panels" />
       <Splitter.Panel id="viewport" class="panel panel--viewport">
-        <Viewport monitorWarnings={monitorWarnings()} />
+        <Viewport height={sections().height} monitorWarnings={monitorWarnings()} />
       </Splitter.Panel>
     </Splitter.Root>
   );

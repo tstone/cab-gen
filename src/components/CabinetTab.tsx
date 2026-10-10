@@ -1,27 +1,29 @@
-import { Match, Show, Switch } from 'solid-js';
-import BodyTypeField from './BodyTypeField';
+import { Show } from 'solid-js';
+import ChoiceCards from './ChoiceCards';
 import LengthField from './LengthField';
 import LengthReadout from './LengthReadout';
 import ProfileFields from './ProfileFields';
+import type { BodySections } from '../geometry/sections';
 import type { SideProfile } from '../geometry/sideProfile';
-import { overallHeight, params, resetCabinet, setParams } from '../state/params';
+import { bodyTypes, params, resetCabinet, setParams } from '../state/params';
+import { inches } from '../state/units';
 
 interface CabinetTabProps {
   profile: SideProfile;
+  sections: BodySections;
   monitorWarnings: string[];
 }
 
 export default function CabinetTab(props: CabinetTabProps) {
-  const overallDepth = () =>
-    params.bodyType === 'bartop-base'
-      ? Math.max(props.profile.overallDepth, params.base.depth)
-      : props.profile.overallDepth;
-
   return (
     <>
       <section class="params__section">
         <h2>Body Type</h2>
-        <BodyTypeField value={params.bodyType} onChange={(v) => setParams('bodyType', v)} />
+        <ChoiceCards
+          options={bodyTypes}
+          value={params.bodyType}
+          onChange={(v) => setParams('bodyType', v)}
+        />
       </section>
 
       <section class="params__section">
@@ -33,66 +35,70 @@ export default function CabinetTab(props: CabinetTabProps) {
           max={1500}
           onChange={(v) => setParams('width', v)}
         />
+        <LengthField
+          label="Depth at floor"
+          value={params.profile.depth}
+          min={300}
+          max={1500}
+          onChange={(v) => setParams('profile', 'depth', v)}
+        />
+        <div class="readout">
+          <span>Overall depth</span>
+          <LengthReadout mm={props.sections.depth} />
+        </div>
+      </section>
 
-        <Switch>
-          <Match when={params.bodyType === 'full'}>
-            <LengthField
-              label="Height"
-              value={params.full.height}
-              min={1000}
-              max={2500}
-              onChange={(v) => setParams('full', 'height', v)}
-            />
-            <LengthField
-              label="Depth at floor"
-              value={params.full.depth}
-              min={300}
-              max={1500}
-              onChange={(v) => setParams('full', 'depth', v)}
-            />
-          </Match>
-          <Match when={params.bodyType === 'bartop' || params.bodyType === 'bartop-base'}>
-            <LengthField
-              label="Bartop height"
-              value={params.bartop.height}
-              min={300}
-              max={1200}
-              onChange={(v) => setParams('bartop', 'height', v)}
-            />
-            <LengthField
-              label="Bartop depth"
-              value={params.bartop.depth}
-              min={300}
-              max={1000}
-              onChange={(v) => setParams('bartop', 'depth', v)}
-            />
-          </Match>
-        </Switch>
+      <section class="params__section">
+        <h2>Heights</h2>
+        <LengthField
+          label="Control panel from floor"
+          value={params.profile.controlPanel.height}
+          min={inches(1)}
+          max={inches(50)}
+          onChange={(v) => setParams('profile', 'controlPanel', 'height', v)}
+        />
+        <LengthField
+          label="Monitor opening"
+          value={params.profile.monitorOpening}
+          min={inches(2)}
+          max={inches(48)}
+          onChange={(v) => setParams('profile', 'monitorOpening', v)}
+        />
+        <LengthField
+          label="Marquee"
+          value={params.profile.marquee.height}
+          min={0}
+          max={inches(20)}
+          onChange={(v) => setParams('profile', 'marquee', 'height', v)}
+        />
+        <p class="hint">
+          Stacked from the floor up: the control panel's front edge, the vertical height of the
+          monitor opening above it, then the marquee face. The overall height follows from these.
+        </p>
 
+        <Show when={params.bodyType !== 'full'}>
+          <LengthField
+            label="Bartop cut below panel"
+            value={params.profile.bartopCut}
+            min={0}
+            max={inches(30)}
+            onChange={(v) => setParams('profile', 'bartopCut', v)}
+          />
+          <div class="readout">
+            <span>Bartop height</span>
+            <LengthReadout mm={props.sections.bartopHeight ?? 0} />
+          </div>
+        </Show>
         <Show when={params.bodyType === 'bartop-base'}>
-          <LengthField
-            label="Base height"
-            value={params.base.height}
-            min={300}
-            max={1500}
-            onChange={(v) => setParams('base', 'height', v)}
-          />
-          <LengthField
-            label="Base depth"
-            value={params.base.depth}
-            min={200}
-            max={1500}
-            onChange={(v) => setParams('base', 'depth', v)}
-          />
+          <div class="readout">
+            <span>Base height</span>
+            <LengthReadout mm={props.sections.baseHeight ?? 0} />
+          </div>
         </Show>
 
         <div class="readout">
           <span>Overall height</span>
-          <LengthReadout mm={overallHeight(params)} />
-        </div>
-        <div class="readout">
-          <span>Overall depth</span>
-          <LengthReadout mm={overallDepth()} />
+          <LengthReadout mm={props.sections.height} />
         </div>
       </section>
 
