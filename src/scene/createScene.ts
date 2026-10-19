@@ -1,10 +1,17 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import type { DimensionGuide } from '../geometry/dimensions';
 import type { CabinetParams } from '../state/params';
-import { buildCabinet, disposeObject } from './buildCabinet';
+import type { ViewPart } from '../state/view';
+import { PROFILE_SPACE, buildCabinet, disposeObject } from './buildCabinet';
+import { type GuideObject, buildGuide } from './dimensionGuide';
 
 export interface SceneHandle {
   setCabinet: (params: CabinetParams) => void;
+  /** Shows or hides parts of the cabinet; kept across rebuilds. */
+  setVisibility: (visibility: Record<ViewPart, boolean>) => void;
+  /** Points out a dimension on the cabinet, or clears it with null; kept across rebuilds. */
+  setGuide: (guide: DimensionGuide | null) => void;
   /** Aims the camera at the vertical middle of a cabinet of the given height (meters). */
   frameHeight: (height: number) => void;
   dispose: () => void;
@@ -52,6 +59,19 @@ export function createScene(container: HTMLElement): SceneHandle {
   scene.add(grid);
 
   let cabinet: THREE.Group | null = null;
+  let guide: GuideObject | null = null;
+  const attachGuide = () => {
+    if (guide) cabinet?.getObjectByName(PROFILE_SPACE)?.add(guide.object);
+  };
+  let visibility: Partial<Record<ViewPart, boolean>> = {};
+  const applyVisibility = () => {
+    for (const [part, visible] of Object.entries(visibility)) {
+      const object = cabinet?.getObjectByName(part);
+      if (object) object.visible = visible;
+    }
+    const outline = cabinet?.getObjectByName('sidesOutline');
+    if (outline) outline.visible = visibility.sides === false;
+  };
 
   // The canvas tracks its container, so splitter drags and window resizes both apply.
   const resize = () => {
@@ -67,17 +87,33 @@ export function createScene(container: HTMLElement): SceneHandle {
 
   renderer.setAnimationLoop(() => {
     controls.update();
+    guide?.faceCamera(camera);
     renderer.render(scene, camera);
   });
 
   return {
     setCabinet(params) {
       if (cabinet) {
+        guide?.object.removeFromParent();
         scene.remove(cabinet);
         disposeObject(cabinet);
       }
       cabinet = buildCabinet(params);
+      applyVisibility();
+      attachGuide();
       scene.add(cabinet);
+    },
+    setGuide(next) {
+      if (guide) {
+        guide.object.removeFromParent();
+        disposeObject(guide.object);
+      }
+      guide = next && buildGuide(next);
+      attachGuide();
+    },
+    setVisibility(next) {
+      visibility = { ...next };
+      applyVisibility();
     },
     frameHeight(height) {
       // Shift camera and target together so the user's orbit angle is preserved.

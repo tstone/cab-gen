@@ -3,12 +3,13 @@ import { produce } from 'solid-js/store';
 import AngleField from './AngleField';
 import ChoiceCards from './ChoiceCards';
 import LengthField from './LengthField';
-import LengthReadout from './LengthReadout';
+import { Readout } from './LengthReadout';
 import ToggleField from './ToggleField';
 import Warnings from './Warnings';
 import type { ControlPanelLayout } from '../geometry/controlPanel';
 import {
   type ProfileParams,
+  controlPanelBottoms,
   controlPanelTypes,
   params,
   resetControlPanel,
@@ -48,6 +49,7 @@ export default function ControlPanelTab(props: ControlPanelTabProps) {
           <h2>Control Panel Mount</h2>
           <LengthField
             label="Depth"
+            dimension="mountDepth"
             value={mount().depth}
             min={inches(1)}
             max={inches(30)}
@@ -55,6 +57,7 @@ export default function ControlPanelTab(props: ControlPanelTabProps) {
           />
           <AngleField
             label="Angle"
+            dimension="mountAngle"
             value={mount().angle}
             min={-30}
             max={45}
@@ -62,6 +65,7 @@ export default function ControlPanelTab(props: ControlPanelTabProps) {
           />
           <LengthField
             label="Overhang"
+            dimension="mountOverhang"
             value={mount().overhang}
             min={0}
             max={inches(20)}
@@ -69,7 +73,8 @@ export default function ControlPanelTab(props: ControlPanelTabProps) {
           />
           <Show when={mount().overhang > 0}>
             <LengthField
-              label="Front thickness"
+              label="Face height"
+              dimension="mountFaceHeight"
               value={mount().thickness}
               min={inches(0.5)}
               max={inches(20)}
@@ -77,6 +82,7 @@ export default function ControlPanelTab(props: ControlPanelTabProps) {
             />
             <AngleField
               label="Underside angle"
+              dimension="mountUndersideAngle"
               value={mount().undersideAngle}
               min={0}
               max={75}
@@ -84,6 +90,17 @@ export default function ControlPanelTab(props: ControlPanelTabProps) {
             />
           </Show>
         </section>
+
+        <Show when={mount().overhang > 0}>
+          <section class="params__section">
+            <h2>Bottom</h2>
+            <ChoiceCards
+              options={controlPanelBottoms}
+              value={params.controlPanel.bottom}
+              onChange={(v) => setParams('controlPanel', 'bottom', v)}
+            />
+          </section>
+        </Show>
       </Show>
 
       <section class="params__section">
@@ -99,14 +116,32 @@ export default function ControlPanelTab(props: ControlPanelTabProps) {
           The front edge follows the cabinet. Positive offsets extend the back edge past the
           control panel mount; negative offsets stop it short.
         </p>
-        <div class="readout">
-          <span>Panel depth</span>
-          <LengthReadout mm={props.layout.depth} />
-        </div>
-        <div class="readout">
-          <span>Panel width</span>
-          <LengthReadout mm={props.layout.width} />
-        </div>
+        <LengthField
+          label="Inset"
+          value={params.controlPanel.inset}
+          min={0}
+          max={inches(4)}
+          fine
+          onChange={(v) => setParams('controlPanel', 'inset', v)}
+        />
+        <Show when={mount().overhang > 0}>
+          <LengthField
+            label="Front face setback"
+            value={params.controlPanel.faceSetback}
+            min={0}
+            max={inches(4)}
+            fine
+            onChange={(v) => setParams('controlPanel', 'faceSetback', v)}
+          />
+        </Show>
+        <p class="hint">
+          Inset is how far the top{mount().overhang > 0 ? ' and chin sit' : ' sits'} below the side
+          panels' edges.
+          {mount().overhang > 0 &&
+            ' The front face sits back from the front edge of the top by the setback, so the top overhangs it.'}
+        </p>
+        <Readout label="Panel depth" mm={props.layout.depth} dimension="panelDepth" />
+        <Readout label="Panel width" mm={props.layout.width} dimension="panelWidth" />
       </section>
 
       <section class="params__section">
@@ -126,7 +161,7 @@ export default function ControlPanelTab(props: ControlPanelTabProps) {
             onChange={(v) => setParams('controlPanel', 'acrylic', 'thickness', v)}
           />
           <p class="hint">
-            The acrylic sits flush with the side panels' edge, with the panel just beneath it.
+            The acrylic sits at the top of the panel, with the board just beneath it.
           </p>
         </Show>
       </section>

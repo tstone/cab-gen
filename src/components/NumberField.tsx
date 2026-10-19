@@ -1,4 +1,6 @@
 import { NumberInput } from '@ark-ui/solid/number-input';
+import type { DimensionKey } from '../geometry/dimensions';
+import { hoverDimension } from '../state/view';
 
 interface NumberFieldProps {
   label: string;
@@ -10,11 +12,16 @@ interface NumberFieldProps {
   /** Maximum decimal places shown. */
   decimals?: number;
   unit?: string;
+  /** Dimension to point out on the preview while hovered. */
+  dimension?: DimensionKey;
 }
 
 export default function NumberField(props: NumberFieldProps) {
+  const hover = hoverDimension(() => props.dimension);
+
   return (
     <NumberInput.Root
+      {...hover}
       class="number-field"
       value={String(props.value)}
       min={props.min}

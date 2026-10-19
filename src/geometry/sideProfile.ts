@@ -21,12 +21,30 @@ export interface SideProfile {
   backHeight: number;
   /** Front-to-back extent including anything that overhangs the lower front. */
   overallDepth: number;
-  /** Height where a bartop is cut off, just below the control panel. */
+  /** Height where a split body is cut in two: where the control panel meets the lower front. */
   cutHeight: number;
   /** Ends of the screen edge before corner rounding: where the monitor opening is. */
   screen: { bottom: Vec2; top: Vec2 };
-  /** Ends of the control panel's top edge, front to back: where the control panel is mounted. */
-  controlPanel: { front: Vec2; back: Vec2 };
+  /**
+   * Ends of the control panel's top edge, front to back: where the control panel
+   * is mounted. When it overhangs, `underside` runs from the bottom of its front
+   * face back down to the lower front.
+   */
+  controlPanel: { front: Vec2; back: Vec2; underside: { front: Vec2; back: Vec2 } | null };
+  /** The lower front edge, from the floor up to the control panel or its underside. */
+  lowerFront: { bottom: Vec2; top: Vec2 };
+  /**
+   * Corners along the top and back edges: from the front of the marquee top
+   * (where any rounding ends), back over the slope, and down the back to the floor.
+   */
+  topBack: Vec2[];
+  /** Ends of the marquee face edge before corner rounding. */
+  marquee: { bottom: Vec2; top: Vec2 };
+  /**
+   * The monitor cut's top line, under the marquee, from where the top corner's
+   * rounding ends forward to the marquee bottom; null if the rounding uses it all up.
+   */
+  screenTop: { back: Vec2; front: Vec2 } | null;
   /** Problems with the current parameters, in plain language. */
   warnings: string[];
 }
@@ -69,13 +87,11 @@ export function sideProfile(p: ProfileParams): SideProfile {
 
   // Monitor opening: rises from the control panel, and its top sets the marquee bottom.
   const opening = Math.max(EPSILON, p.monitorOpening);
-  const cut = p.monitorCut.enabled ? monitorCut(p, cpBack, marqueeBottomX, opening, warnings) : null;
-  const marqueeBottom: Vec2 = cut
-    ? {
-        x: marqueeBottomX,
-        y: cut.top.y + (marqueeBottomX - cut.top.x) * Math.tan(deg(p.monitorCut.topAngle)),
-      }
-    : { x: marqueeBottomX, y: cpBack.y + opening };
+  const cut = monitorCut(p, cpBack, marqueeBottomX, opening, warnings);
+  const marqueeBottom: Vec2 = {
+    x: marqueeBottomX,
+    y: cut.top.y + (marqueeBottomX - cut.top.x) * Math.tan(deg(p.monitorCut.topAngle)),
+  };
   if (marqueeBottom.y <= cpBack.y) {
     warnings.push('The marquee bottom is below the control panel.');
   }
@@ -104,6 +120,7 @@ export function sideProfile(p: ProfileParams): SideProfile {
 
   // Lowest point of the control panel's front: where the underside meets the lower front, or the top edge if flush.
   let cpLowest = cp.height;
+  let underside: SideProfile['controlPanel']['underside'] = null;
   const corners: Corner[] = [];
   corners.push({ p: { x: 0, y: 0 }, role: 'panel' }, { p: { x: D, y: 0 }, role: 'panel' });
 
@@ -119,19 +136,15 @@ export function sideProfile(p: ProfileParams): SideProfile {
     }
     corners.push({ p: underBack, role: 'panel' }, { p: underFront, role: 'panel' });
     cpLowest = underBack.y;
+    underside = { front: underFront, back: underBack };
   }
   corners.push({ p: cpFront, role: 'controlPanel' });
 
-  if (cut) {
-    corners.push(
-      { p: cpBack, role: 'panel' },
-      { p: cut.bottom, role: 'screen', radius: p.monitorCut.bottomRadius },
-      { p: cut.top, role: 'panel', radius: p.monitorCut.topRadius },
-    );
-  } else {
-    // No cut: the screen runs straight from the control panel to the marquee.
-    corners.push({ p: cpBack, role: 'screen' });
-  }
+  corners.push(
+    { p: cpBack, role: 'panel' },
+    { p: cut.bottom, role: 'screen', radius: p.monitorCut.bottomRadius },
+    { p: cut.top, role: 'panel', radius: p.monitorCut.topRadius },
+  );
 
   corners.push(
     { p: marqueeBottom, role: 'marquee' },
@@ -146,10 +159,41 @@ export function sideProfile(p: ProfileParams): SideProfile {
     warnings.push('The side profile overlaps itself; the preview may look wrong until this is fixed.');
   }
   const overallDepth = Math.max(...outline.map((pt) => pt.x)) - Math.min(0, ...outline.map((pt) => pt.x));
-  const screen = cut ?? { bottom: cpBack, top: marqueeBottom };
-  const cutHeight = Math.max(0, cpLowest - Math.max(0, p.bartopCut));
-  const controlPanel = { front: cpFront, back: cpBack };
-  return { outline, roles, backHeight, overallDepth, cutHeight, screen, controlPanel, warnings };
+  const screen = cut;
+  const cutHeight = Math.max(0, cpLowest);
+  const controlPanel = { front: cpFront, back: cpBack, underside };
+  const lowerFront = { bottom: { x: D, y: 0 }, top: underside ? underside.back : { x: D, y: cp.height } };
+  // The marquee top starts where its front corner's rounding ends: the outline point before its back.
+  const topBackIndex = outline.findIndex((pt) => pt.x === topBack.x && pt.y === topBack.y);
+  const topBackChain = [
+    outline[topBackIndex - 1] ?? topFront,
+    topBack,
+    ...(p.rise.enabled ? [riseBottom] : []),
+    { x: 0, y: backHeight },
+    { x: 0, y: 0 },
+  ];
+  // The top line ends at the marquee bottom; the outline point before it is where its rounding ends.
+  const marqueeBottomIndex = outline.findIndex(
+    (pt) => Math.hypot(pt.x - marqueeBottom.x, pt.y - marqueeBottom.y) < EPSILON,
+  );
+  const screenTop =
+    marqueeBottomIndex > 0
+      ? { back: outline[marqueeBottomIndex - 1], front: outline[marqueeBottomIndex] }
+      : null;
+  return {
+    outline,
+    roles,
+    backHeight,
+    overallDepth,
+    cutHeight,
+    screen,
+    controlPanel,
+    lowerFront,
+    topBack: topBackChain,
+    marquee: { bottom: marqueeBottom, top: topFront },
+    screenTop,
+    warnings,
+  };
 }
 
 /**

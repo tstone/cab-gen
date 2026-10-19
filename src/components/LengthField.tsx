@@ -1,4 +1,5 @@
 import NumberField from './NumberField';
+import type { DimensionKey } from '../geometry/dimensions';
 import { fromMm, toMm, unit, units } from '../state/units';
 
 interface LengthFieldProps {
@@ -10,6 +11,8 @@ interface LengthFieldProps {
   max?: number;
   /** Smaller step and one extra decimal, for small sizes like material thickness. */
   fine?: boolean;
+  /** Dimension to point out on the preview while hovered. */
+  dimension?: DimensionKey;
 }
 
 export default function LengthField(props: LengthFieldProps) {
@@ -25,6 +28,7 @@ export default function LengthField(props: LengthFieldProps) {
       max={props.max === undefined ? undefined : fromMm(props.max, unit(), extra())}
       step={props.fine ? info().fineStep : info().step}
       decimals={info().decimals + extra()}
+      dimension={props.dimension}
       onChange={(v) => props.onChange(toMm(v, unit()))}
     />
   );

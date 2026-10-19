@@ -4,8 +4,6 @@ import type { SideProfile, Vec2 } from './sideProfile';
 export interface BodySections {
   /** Side outlines of each separate body section, in the full profile's coordinates. */
   outlines: Vec2[][];
-  /** Profile height that rests on the floor: the cut height for a lone bartop, 0 otherwise. */
-  floor: number;
   /** Floor to the top of the highest section. */
   height: number;
   /** Front-to-back extent of all sections together. */
@@ -17,39 +15,37 @@ export interface BodySections {
 
 /**
  * Splits the full-size profile into the sections a body type is built from.
- * A bartop is the full profile cut off at `profile.cutHeight`; a bartop + base
- * keeps both halves of that cut.
+ * A split body is the full profile split in two at `profile.cutHeight`.
  */
 export function bodySections(profile: SideProfile, bodyType: BodyType): BodySections {
   const { outline, cutHeight } = profile;
   const top = Math.max(...outline.map((pt) => pt.y));
 
-  let outlines: Vec2[][];
-  let floor = 0;
-  if (bodyType === 'full') {
-    outlines = [outline];
-  } else {
-    const upper = clipOutline(outline, cutHeight, 'above');
-    if (bodyType === 'bartop') {
-      outlines = [upper];
-      floor = cutHeight;
-    } else {
-      outlines = [clipOutline(outline, cutHeight, 'below'), upper].filter((o) => o.length >= 3);
-    }
-  }
+  const outlines = splitSections(outline, cutHeight, bodyType);
 
   const xs = outlines.flat().map((pt) => pt.x);
   const result: BodySections = {
     outlines,
-    floor,
-    height: top - floor,
+    height: top,
     depth: Math.max(...xs) - Math.min(0, ...xs),
   };
-  if (bodyType !== 'full') {
+  if (bodyType === 'bartop-base') {
     result.bartopHeight = top - cutHeight;
-    if (bodyType === 'bartop-base') result.baseHeight = cutHeight;
+    result.baseHeight = cutHeight;
   }
   return result;
+}
+
+/**
+ * Splits a side outline (of the body or one of its panels) into the pieces
+ * each section gets: whole for a full-size body, else below and above the
+ * bartop cut, leaving out a section it doesn't reach.
+ */
+export function splitSections(outline: Vec2[], cutHeight: number, bodyType: BodyType): Vec2[][] {
+  if (bodyType === 'full') return [outline];
+  return [clipOutline(outline, cutHeight, 'below'), clipOutline(outline, cutHeight, 'above')].filter(
+    (o) => o.length >= 3,
+  );
 }
 
 /** Keeps the part of the outline above or below a horizontal line (Sutherland–Hodgman). */

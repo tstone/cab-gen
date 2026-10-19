@@ -1,16 +1,20 @@
 import { Tabs } from '@ark-ui/solid/tabs';
+import ButtonsTab from './ButtonsTab';
 import CabinetTab from './CabinetTab';
 import ControlPanelTab from './ControlPanelTab';
-import LayoutTab from './LayoutTab';
+import MarqueeTab from './MarqueeTab';
 import SettingsTab from './SettingsTab';
+import SpeakersTab from './SpeakersTab';
 import type { ControlPanelLayout } from '../geometry/controlPanel';
 import type { BodySections } from '../geometry/sections';
 import type { SideProfile } from '../geometry/sideProfile';
+import type { SpeakerPanel } from '../geometry/speakers';
 
 interface ParametersPanelProps {
   profile: SideProfile;
   sections: BodySections;
   monitorWarnings: string[];
+  speakers: SpeakerPanel | null;
   controlPanel: ControlPanelLayout;
   layoutWarnings: string[];
 }
@@ -30,11 +34,17 @@ export default function ParametersPanel(props: ParametersPanelProps) {
           <Tabs.Trigger value="cabinet" class="tabs__trigger">
             Cabinet
           </Tabs.Trigger>
+          <Tabs.Trigger value="marquee" class="tabs__trigger">
+            Marquee
+          </Tabs.Trigger>
+          <Tabs.Trigger value="speakers" class="tabs__trigger">
+            Speakers
+          </Tabs.Trigger>
           <Tabs.Trigger value="control-panel" class="tabs__trigger">
             Control Panel
           </Tabs.Trigger>
-          <Tabs.Trigger value="layout" class="tabs__trigger">
-            Layout
+          <Tabs.Trigger value="buttons" class="tabs__trigger">
+            Buttons
           </Tabs.Trigger>
           <Tabs.Indicator class="tabs__indicator" />
         </Tabs.List>
@@ -49,11 +59,17 @@ export default function ParametersPanel(props: ParametersPanelProps) {
             monitorWarnings={props.monitorWarnings}
           />
         </Tabs.Content>
+        <Tabs.Content value="marquee" class="tabs__content">
+          <MarqueeTab profile={props.profile} />
+        </Tabs.Content>
+        <Tabs.Content value="speakers" class="tabs__content">
+          <SpeakersTab panel={props.speakers} />
+        </Tabs.Content>
         <Tabs.Content value="control-panel" class="tabs__content">
           <ControlPanelTab layout={props.controlPanel} />
         </Tabs.Content>
-        <Tabs.Content value="layout" class="tabs__content">
-          <LayoutTab panel={props.controlPanel} warnings={props.layoutWarnings} />
+        <Tabs.Content value="buttons" class="tabs__content">
+          <ButtonsTab panel={props.controlPanel} warnings={props.layoutWarnings} />
         </Tabs.Content>
       </Tabs.Root>
     </div>

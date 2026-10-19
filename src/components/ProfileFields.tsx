@@ -2,7 +2,6 @@ import { Show } from 'solid-js';
 import { produce } from 'solid-js/store';
 import AngleField from './AngleField';
 import LengthField from './LengthField';
-import LengthReadout from './LengthReadout';
 import ToggleField from './ToggleField';
 import Warnings from './Warnings';
 import type { SideProfile } from '../geometry/sideProfile';
@@ -20,6 +19,11 @@ interface ProfileFieldsProps {
 export default function ProfileFields(props: ProfileFieldsProps) {
   const p = () => params.profile;
   const update = (fn: (draft: ProfileParams) => void) => setParams('profile', produce(fn));
+  // With no bottom line, the screen face rises straight from the control panel's back edge.
+  const hasBottomLine = () => {
+    const { screen, controlPanel } = props.profile;
+    return Math.hypot(screen.bottom.x - controlPanel.back.x, screen.bottom.y - controlPanel.back.y) > 1e-6;
+  };
 
   return (
     <>
@@ -30,130 +34,61 @@ export default function ProfileFields(props: ProfileFieldsProps) {
       </Show>
 
       <section class="params__section">
-        <h2>Marquee</h2>
+        <h2>Monitor Cut</h2>
         <LengthField
           label="Depth"
-          value={p().marquee.depth}
-          min={0}
+          dimension="cutDepth"
+          value={p().monitorCut.depth}
+          min={inches(0.5)}
           max={inches(30)}
-          onChange={(v) => update((d) => void (d.marquee.depth = v))}
-        />
-        <LengthField
-          label="Setback from front"
-          value={p().marquee.setback}
-          min={inches(-12)}
-          max={inches(30)}
-          onChange={(v) => update((d) => void (d.marquee.setback = v))}
+          onChange={(v) => update((d) => void (d.monitorCut.depth = v))}
         />
         <AngleField
-          label="Top angle"
-          value={p().marquee.topAngle}
+          label="Top line angle"
+          dimension="cutTopAngle"
+          value={p().monitorCut.topAngle}
           min={-45}
-          max={45}
-          onChange={(v) => update((d) => void (d.marquee.topAngle = v))}
-        />
-        <AngleField
-          label="Face angle"
-          value={p().marquee.faceAngle}
-          min={-45}
-          max={60}
-          onChange={(v) => update((d) => void (d.marquee.faceAngle = v))}
-        />
-        <LengthField
-          label="Corner radius"
-          value={p().marquee.cornerRadius}
-          min={0}
-          max={inches(12)}
-          onChange={(v) => update((d) => void (d.marquee.cornerRadius = v))}
-        />
-      </section>
-
-      <section class="params__section">
-        <h2>Top</h2>
-        <ToggleField
-          label="Rise behind marquee"
-          checked={p().rise.enabled}
-          onChange={(v) => update((d) => void (d.rise.enabled = v))}
-        />
-        <Show when={p().rise.enabled}>
-          <LengthField
-            label="Rise height"
-            value={p().rise.height}
-            min={inches(0.25)}
-            max={inches(24)}
-            onChange={(v) => update((d) => void (d.rise.height = v))}
-          />
-          <AngleField
-            label="Rise angle"
-            value={p().rise.angle}
-            min={0}
-            max={80}
-            onChange={(v) => update((d) => void (d.rise.angle = v))}
-          />
-        </Show>
-        <AngleField
-          label="Back slope"
-          value={p().backSlope}
-          min={-30}
           max={80}
-          onChange={(v) => update((d) => void (d.backSlope = v))}
+          onChange={(v) => update((d) => void (d.monitorCut.topAngle = v))}
         />
-        <div class="readout">
-          <span>Back height</span>
-          <LengthReadout mm={props.profile.backHeight} />
-        </div>
-      </section>
-
-      <section class="params__section">
-        <h2>Monitor Cut</h2>
-        <ToggleField
-          label="Monitor cut"
-          checked={p().monitorCut.enabled}
-          onChange={(v) => update((d) => void (d.monitorCut.enabled = v))}
+        <AngleField
+          label="Screen angle"
+          dimension="cutFaceAngle"
+          value={p().monitorCut.faceAngle}
+          min={-30}
+          max={60}
+          onChange={(v) => update((d) => void (d.monitorCut.faceAngle = v))}
         />
-        <Show when={p().monitorCut.enabled}>
-          <LengthField
-            label="Depth"
-            value={p().monitorCut.depth}
-            min={inches(0.5)}
-            max={inches(30)}
-            onChange={(v) => update((d) => void (d.monitorCut.depth = v))}
-          />
-          <AngleField
-            label="Top line angle"
-            value={p().monitorCut.topAngle}
-            min={-45}
-            max={80}
-            onChange={(v) => update((d) => void (d.monitorCut.topAngle = v))}
-          />
-          <AngleField
-            label="Screen angle"
-            value={p().monitorCut.faceAngle}
-            min={-30}
-            max={60}
-            onChange={(v) => update((d) => void (d.monitorCut.faceAngle = v))}
-          />
-          <AngleField
-            label="Bottom line angle"
-            value={p().monitorCut.bottomAngle}
-            min={-45}
-            max={80}
-            onChange={(v) => update((d) => void (d.monitorCut.bottomAngle = v))}
-          />
-          <LengthField
-            label="Top corner radius"
-            value={p().monitorCut.topRadius}
-            min={0}
-            max={inches(8)}
-            onChange={(v) => update((d) => void (d.monitorCut.topRadius = v))}
-          />
-          <LengthField
-            label="Bottom corner radius"
-            value={p().monitorCut.bottomRadius}
-            min={0}
-            max={inches(8)}
-            onChange={(v) => update((d) => void (d.monitorCut.bottomRadius = v))}
-          />
+        <AngleField
+          label="Bottom line angle"
+          dimension="cutBottomAngle"
+          value={p().monitorCut.bottomAngle}
+          min={-45}
+          max={80}
+          onChange={(v) => update((d) => void (d.monitorCut.bottomAngle = v))}
+        />
+        <LengthField
+          label="Top corner radius"
+          dimension="cutTopRadius"
+          value={p().monitorCut.topRadius}
+          min={0}
+          max={inches(8)}
+          onChange={(v) => update((d) => void (d.monitorCut.topRadius = v))}
+        />
+        <LengthField
+          label="Bottom corner radius"
+          dimension="cutBottomRadius"
+          value={p().monitorCut.bottomRadius}
+          min={0}
+          max={inches(8)}
+          onChange={(v) => update((d) => void (d.monitorCut.bottomRadius = v))}
+        />
+        <Show when={!hasBottomLine()}>
+          <p class="hint">
+            The screen starts right at the back of the control panel, so there's no bottom line and
+            its angle and corner radius have no effect. Increase the cut depth or shorten the control
+            panel to bring it back.
+          </p>
         </Show>
       </section>
 
@@ -161,6 +96,7 @@ export default function ProfileFields(props: ProfileFieldsProps) {
         <h2>Monitor Placement</h2>
         <LengthField
           label="Vertical offset"
+          dimension="monitorOffset"
           value={p().monitor.offset}
           min={inches(-20)}
           max={inches(20)}
@@ -168,15 +104,38 @@ export default function ProfileFields(props: ProfileFieldsProps) {
         />
         <LengthField
           label="Recess depth"
+          dimension="monitorRecess"
           value={p().monitor.recess}
           min={0}
           max={inches(12)}
           fine
           onChange={(v) => update((d) => void (d.monitor.recess = v))}
         />
+        <ToggleField
+          label="Separate monitor mount angle"
+          checked={p().monitor.separateAngle}
+          onChange={(v) =>
+            update((d) => {
+              // Start from the screen angle so turning this on doesn't move the monitor.
+              if (v) d.monitor.angle = d.monitorCut.faceAngle;
+              d.monitor.separateAngle = v;
+            })
+          }
+        />
+        <Show when={p().monitor.separateAngle}>
+          <AngleField
+            label="Monitor angle"
+            dimension="monitorAngle"
+            value={p().monitor.angle}
+            min={-30}
+            max={60}
+            onChange={(v) => update((d) => void (d.monitor.angle = v))}
+          />
+        </Show>
         <p class="hint">
           Offset slides the monitor along the screen opening from its center. Recess is how far
-          behind the opening the monitor face sits.
+          behind the opening the monitor face sits. The monitor matches the screen angle unless it
+          has its own mount angle.
         </p>
       </section>
     </>

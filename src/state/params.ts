@@ -2,11 +2,10 @@ import { createEffect, createRoot } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { inches } from './units';
 
-export type BodyType = 'bartop' | 'bartop-base' | 'full';
+export type BodyType = 'bartop-base' | 'full';
 
 export const bodyTypes: { value: BodyType; label: string; description: string }[] = [
-  { value: 'bartop', label: 'Bartop', description: 'Cut off below the control panel, sits on a table or bar' },
-  { value: 'bartop-base', label: 'Bartop + Base', description: 'Full size, split into a bartop and base below the control panel' },
+  { value: 'bartop-base', label: 'Split', description: 'Full size, split into a bartop and base where the control panel meets the front' },
   { value: 'full', label: 'Full Size', description: 'Single full-height cabinet' },
 ];
 
@@ -22,6 +21,14 @@ export const controlPanelTypes: {
   { value: 'removable', label: 'Removable', description: 'A separate assembly that sits on the cabinet (coming soon)', disabled: true },
 ];
 
+/** How the bottom of an overhanging control panel is closed in, behind its front face. */
+export type ControlPanelBottom = 'chin' | 'square';
+
+export const controlPanelBottoms: { value: ControlPanelBottom; label: string; description: string }[] = [
+  { value: 'chin', label: 'Chin', description: "Slopes back to the lower front at the cabinet's underside angle" },
+  { value: 'square', label: 'Square', description: 'No chin; a bottom panel runs straight back from the front face' },
+];
+
 /** Lengths in millimeters. */
 export interface ControlPanelParams {
   type: ControlPanelType;
@@ -30,7 +37,15 @@ export interface ControlPanelParams {
    * control panel mount in the side profile; positive extends further back.
    */
   backOffset: number;
-  /** Clear sheet over the panel, between the side panels and flush with their edge. */
+  /**
+   * How far the top, front face and chin sit in from the side panels' edges.
+   * 0 is flush.
+   */
+  inset: number;
+  /** How much farther back than the top's front edge the front face sits, so the top overhangs it. */
+  faceSetback: number;
+  bottom: ControlPanelBottom;
+  /** Clear sheet over the panel, between the side panels and on top of the board. */
   acrylic: { enabled: boolean; thickness: number };
 }
 
@@ -179,7 +194,6 @@ export interface ProfileParams {
   /** Angle of the top slope from the rise (or marquee) down to the back, from horizontal. */
   backSlope: number;
   monitorCut: {
-    enabled: boolean;
     /** How far back the cut goes, measured horizontally from the marquee front face. */
     depth: number;
     /** Top line, from horizontal; positive drops toward the back. */
@@ -205,18 +219,71 @@ export interface ProfileParams {
     /** Slope of the underside from horizontal, dropping back toward the lower front. */
     undersideAngle: number;
   };
-  /**
-   * How far below the lowest front point of the control panel the bartop is cut
-   * off. Bartops keep the part above the cut; a bartop + base keeps both parts.
-   */
-  bartopCut: number;
   /** Where the monitor sits relative to the screen edge of the profile. */
   monitor: {
     /** Slide along the screen edge from the center of the opening; positive moves up. */
     offset: number;
     /** Distance from the screen edge back to the monitor's front face. */
     recess: number;
+    /** Tilt the monitor at its own angle instead of matching the screen face. */
+    separateAngle: boolean;
+    /** Monitor lean from vertical when `separateAngle` is on; positive tips the top back. */
+    angle: number;
   };
+}
+
+export type CoinDoorType = 'none' | 'standard' | 'pinball';
+
+/** Cutout size (mm) for each coin door. */
+export const coinDoorSizes: Record<Exclude<CoinDoorType, 'none'>, { width: number; height: number }> = {
+  standard: { width: 185, height: 252 },
+  pinball: { width: inches(12.15), height: inches(10.41) },
+};
+
+export const coinDoorTypes: { value: CoinDoorType; label: string; description: string }[] = [
+  { value: 'none', label: 'None', description: 'No coin door' },
+  { value: 'standard', label: 'Standard', description: 'Upright arcade door, cut out 185mm wide by 252mm tall' },
+  { value: 'pinball', label: 'Pinball', description: 'Pinball style door, cut out 12.15" wide by 10.41" tall' },
+];
+
+export type SpeakerChannels = 'mono' | 'stereo';
+
+export const speakerChannelOptions: { value: SpeakerChannels; label: string; description: string }[] = [
+  { value: 'mono', label: 'Mono', description: 'One speaker, centered on the panel' },
+  { value: 'stereo', label: 'Stereo', description: 'Two speakers, centered in each half of the panel' },
+];
+
+export type SpeakerSize = '4' | '5.25';
+
+export const speakerSizeOptions: { value: SpeakerSize; label: string }[] = [
+  { value: '4', label: '4"' },
+  { value: '5.25', label: '5.25"' },
+];
+
+/**
+ * Typical cutout and mounting dimensions (mm) for each speaker size. Speakers
+ * vary, so check these against the ones being fitted.
+ */
+export const speakerSizes: Record<SpeakerSize, { cutout: number; boltCircle: number; boltHole: number }> = {
+  '4': { cutout: inches(3.75), boltCircle: inches(4.25), boltHole: inches(5 / 32) },
+  '5.25': { cutout: inches(4.5), boltCircle: inches(5.25), boltHole: inches(5 / 32) },
+};
+
+export type SpeakerCut = 'hole' | 'slots' | 'perforated';
+
+export const speakerCuts: { value: SpeakerCut; label: string; description: string }[] = [
+  { value: 'hole', label: 'Hole', description: 'One round cutout the size of the speaker cone' },
+  { value: 'slots', label: 'Slots', description: 'Rows of slots across the cabinet, filling the cutout' },
+  { value: 'perforated', label: 'Perforated', description: 'A grid of drilled holes filling the cutout' },
+];
+
+/** The speaker panel: the board along the top line of the monitor cut, under the marquee. */
+export interface SpeakerParams {
+  channels: SpeakerChannels;
+  size: SpeakerSize;
+  cut: SpeakerCut;
+  /** Drill the holes for the screws that hold each speaker. */
+  mountingHoles: boolean;
 }
 
 /** All lengths are in millimeters. */
@@ -227,21 +294,30 @@ export interface CabinetParams {
   /** Sheet goods thickness, used for every panel. */
   materialThickness: number;
   monitor: MonitorSpec;
-  /** Full-height side profile. Bartops are cut from it just below the control panel. */
+  /** Full-height side profile. A split body is cut in two where the control panel meets the lower front. */
   profile: ProfileParams;
   controlPanel: ControlPanelParams;
+  /** How far the boards between the side panels sit in from the sides' edges. 0 is flush. */
+  panels: { frontInset: number; topBackInset: number };
+  /** Cut out of the lower front panel, centered across it. */
+  coinDoor: {
+    type: CoinDoorType;
+    /** Height of the cutout's bottom edge from the floor. */
+    bottom: number;
+  };
   layout: LayoutParams;
+  speakers: SpeakerParams;
 }
 
 // Defaults use round imperial sizes, since most cabinets are built from US plans and sheet goods.
 export const defaultParams: CabinetParams = {
-  bodyType: 'bartop',
+  bodyType: 'bartop-base',
   width: inches(26),
   // Most "3/4 inch" plywood and MDF sold in stores is actually 23/32".
   materialThickness: inches(23 / 32),
   monitor: {
-    aspectRatio: '4:3',
-    diagonal: inches(19),
+    aspectRatio: '16:9',
+    diagonal: inches(23.75),
     orientation: 'horizontal',
     bezel: inches(0.75),
     depth: inches(2.5),
@@ -249,9 +325,9 @@ export const defaultParams: CabinetParams = {
   // Roughly a classic Atari upright.
   profile: {
     monitorOpening: inches(19),
-    depth: inches(27),
+    depth: inches(24),
     marquee: {
-      height: inches(9),
+      height: inches(8),
       depth: inches(8),
       setback: inches(0),
       topAngle: 8,
@@ -261,7 +337,6 @@ export const defaultParams: CabinetParams = {
     rise: { enabled: false, height: inches(2.5), angle: 35 },
     backSlope: 30,
     monitorCut: {
-      enabled: true,
       depth: inches(9),
       topAngle: 30,
       faceAngle: 18,
@@ -274,17 +349,21 @@ export const defaultParams: CabinetParams = {
       depth: inches(7),
       angle: 8,
       overhang: inches(5),
-      thickness: inches(4),
+      thickness: inches(5.25),
       undersideAngle: 35,
     },
-    bartopCut: inches(2),
-    monitor: { offset: 0, recess: inches(1) },
+    monitor: { offset: 0, recess: inches(1), separateAngle: false, angle: 18 },
   },
   controlPanel: {
     type: 'integrated',
     backOffset: 0,
+    inset: inches(0.25),
+    faceSetback: inches(0.5),
+    bottom: 'chin',
     acrylic: { enabled: true, thickness: inches(1 / 8) },
   },
+  panels: { frontInset: inches(0.25), topBackInset: inches(0.25) },
+  coinDoor: { type: 'standard', bottom: inches(12) },
   layout: {
     playerCount: 2,
     main: {
@@ -304,6 +383,7 @@ export const defaultParams: CabinetParams = {
     hardware: { stickHole: inches(1.125), buttonSize: 30 },
     start: { size: 24, spacing: inches(1.5), fromBack: inches(1) },
   },
+  speakers: { channels: 'stereo', size: '4', cut: 'slots', mountingHoles: true },
 };
 
 const STORAGE_KEY = 'cab-gen:params';
@@ -333,7 +413,24 @@ function loadParams(): CabinetParams {
   const defaults = structuredClone(defaultParams);
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return mergeStored(defaults, JSON.parse(stored));
+    if (stored) {
+      const merged = mergeStored(defaults, JSON.parse(stored));
+      // Older versions also offered a lone bartop.
+      if (!bodyTypes.some((t) => t.value === merged.bodyType)) merged.bodyType = defaults.bodyType;
+      if (!controlPanelBottoms.some((b) => b.value === merged.controlPanel.bottom)) {
+        merged.controlPanel.bottom = defaults.controlPanel.bottom;
+      }
+      if (!coinDoorTypes.some((c) => c.value === merged.coinDoor.type)) {
+        merged.coinDoor.type = defaults.coinDoor.type;
+      }
+      const { speakers } = merged;
+      if (!speakerChannelOptions.some((c) => c.value === speakers.channels)) {
+        speakers.channels = defaults.speakers.channels;
+      }
+      if (!speakerSizeOptions.some((s) => s.value === speakers.size)) speakers.size = defaults.speakers.size;
+      if (!speakerCuts.some((c) => c.value === speakers.cut)) speakers.cut = defaults.speakers.cut;
+      return merged;
+    }
   } catch {
     // Storage unavailable or unreadable; fall through to the defaults.
   }
@@ -366,14 +463,40 @@ export function resetSettings() {
 }
 
 /**
- * Restores the Cabinet tab values (body type, dimensions and profiles). The
- * control panel mount is edited on the Control Panel tab, so it's kept, apart
- * from its height.
+ * Restores the Cabinet tab values (body type, dimensions, profiles, panels and
+ * coin door). The control panel mount and the marquee are edited on their own
+ * tabs, so they're kept, apart from their heights.
  */
 export function resetCabinet() {
   const d = structuredClone(defaultParams);
   const controlPanel = { ...params.profile.controlPanel, height: d.profile.controlPanel.height };
-  setParams({ bodyType: d.bodyType, width: d.width, profile: { ...d.profile, controlPanel } });
+  const marquee = { ...params.profile.marquee, height: d.profile.marquee.height };
+  setParams({
+    bodyType: d.bodyType,
+    width: d.width,
+    profile: {
+      ...d.profile,
+      controlPanel,
+      marquee,
+      rise: { ...params.profile.rise },
+      backSlope: params.profile.backSlope,
+    },
+    panels: d.panels,
+    coinDoor: d.coinDoor,
+  });
+}
+
+/** Restores the Marquee tab values: the marquee (but not its height), rise and back slope. */
+export function resetMarquee() {
+  const d = structuredClone(defaultParams);
+  setParams('profile', 'marquee', { ...d.profile.marquee, height: params.profile.marquee.height });
+  setParams('profile', 'rise', d.profile.rise);
+  setParams('profile', 'backSlope', d.profile.backSlope);
+}
+
+/** Restores the Speakers tab values. */
+export function resetSpeakers() {
+  setParams('speakers', structuredClone(defaultParams.speakers));
 }
 
 /** Restores the Control Panel tab values, including the mount in the side profile (but not its height). */
@@ -386,7 +509,7 @@ export function resetControlPanel() {
   });
 }
 
-/** Restores the Layout tab values. */
+/** Restores the Buttons tab values. */
 export function resetLayout() {
   setParams('layout', structuredClone(defaultParams.layout));
 }

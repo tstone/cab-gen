@@ -86,6 +86,174 @@ body,
   left: 12px;
 }
 
+.viewport__overlay--top-right {
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-button {
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.export-button:hover {
+  background: color-mix(in srgb, var(--accent) 85%, #fff);
+}
+
+.export-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Export dialog */
+.export-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgb(128 128 128 / 50%);
+  backdrop-filter: blur(6px);
+}
+
+.export-dialog__positioner {
+  position: fixed;
+  inset: 0;
+  z-index: 101;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.export-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 440px;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 45%);
+  outline: none;
+}
+
+.export-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.export-dialog__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.export-dialog__close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.export-dialog__close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.export-dialog__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-dialog__section-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.export-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.export-dialog__cancel {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.export-dialog__cancel:hover {
+  background: var(--surface-2);
+}
+
+.export-dialog__close:focus-visible,
+.export-dialog__cancel:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.viewport__overlay--top-center {
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 32px);
+  pointer-events: none;
+}
+
+.wip-banner {
+  padding: 6px 12px;
+  border: 1px solid #7a5a1e;
+  border-radius: 6px;
+  background: color-mix(in srgb, #2e2617 92%, transparent);
+  backdrop-filter: blur(6px);
+  color: #f0c674;
+  font-size: 13px;
+}
+
+.visibility-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 150px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(6px);
+  font-size: 12px;
+}
+
 .viewport__overlay--bottom-center {
   bottom: 16px;
   left: 50%;
@@ -178,6 +346,8 @@ body,
   display: flex;
   flex: none;
   border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .tabs__trigger {
@@ -497,6 +667,45 @@ body,
 
 .toggle-field__thumb[data-state='checked'] {
   transform: translateX(14px);
+}
+
+/* Checkbox */
+/* Anchors Ark's absolutely positioned hidden input, as with the toggle field. */
+.checkbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  cursor: pointer;
+}
+
+.checkbox__control {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--text-muted);
+  border-radius: 4px;
+}
+
+.checkbox__control[data-state='checked'] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.checkbox__control[data-focus-visible] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.checkbox__indicator {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* Warnings */

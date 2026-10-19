@@ -58,24 +58,38 @@ export function placeMonitor(
   const { bottom, top } = profile.screen;
 
   const opening = Math.hypot(top.x - bottom.x, top.y - bottom.y);
-  const along = { x: (top.x - bottom.x) / opening, y: (top.y - bottom.y) / opening };
+  const screenAlong = { x: (top.x - bottom.x) / opening, y: (top.y - bottom.y) / opening };
   // The outline is counter-clockwise, so the inside is to the left of the edge direction.
+  const screenInward = { x: -screenAlong.y, y: screenAlong.x };
+
+  // By default the monitor lies flat against the screen face; otherwise it leans at its own angle.
+  const lean = (placement.angle * Math.PI) / 180;
+  const along = placement.separateAngle ? { x: -Math.sin(lean), y: Math.cos(lean) } : screenAlong;
   const inward = { x: -along.y, y: along.x };
   const at = (base: Vec2, a: number, i: number) => ({
     x: base.x + along.x * a + inward.x * i,
     y: base.y + along.y * a + inward.y * i,
   });
 
+  // Recess is measured straight back from the middle of the opening.
   const mid = { x: (bottom.x + top.x) / 2, y: (bottom.y + top.y) / 2 };
-  const faceCenter = at(mid, placement.offset, placement.recess);
+  const recessed = {
+    x: mid.x + screenInward.x * placement.recess,
+    y: mid.y + screenInward.y * placement.recess,
+  };
+  const faceCenter = at(recessed, placement.offset, 0);
 
   if (size.outerAcross > innerWidth) {
     warnings.push('The monitor is wider than the inside of the cabinet.');
   }
 
-  // The visible picture should sit within the screen opening.
-  const pictureTop = placement.offset + size.viewAlong / 2;
-  const pictureBottom = placement.offset - size.viewAlong / 2;
+  // The visible picture, projected onto the screen edge, should sit within the opening.
+  const alongScreen = (a: number) => {
+    const pt = at(faceCenter, a, 0);
+    return (pt.x - mid.x) * screenAlong.x + (pt.y - mid.y) * screenAlong.y;
+  };
+  const pictureTop = alongScreen(size.viewAlong / 2);
+  const pictureBottom = alongScreen(-size.viewAlong / 2);
   if (pictureTop > opening / 2 + 0.5) {
     warnings.push('The top of the picture is hidden above the screen opening.');
   }

@@ -2,7 +2,7 @@ import { For, Show } from 'solid-js';
 import AngleField from './AngleField';
 import ChoiceCards from './ChoiceCards';
 import LengthField from './LengthField';
-import LengthReadout from './LengthReadout';
+import { Readout } from './LengthReadout';
 import Segmented from './Segmented';
 import SelectField from './SelectField';
 import Warnings from './Warnings';
@@ -30,12 +30,12 @@ const presetOptions = Object.entries(playAreaPresets).map(([value, preset]) => (
   label: preset.label,
 }));
 
-interface LayoutTabProps {
+interface ButtonsTabProps {
   panel: ControlPanelLayout;
   warnings: string[];
 }
 
-export default function LayoutTab(props: LayoutTabProps) {
+export default function ButtonsTab(props: ButtonsTabProps) {
   const main = () => params.layout.main;
   const generic = () => main().generic;
   const hasHoles = () => main().mode !== 'empty';
@@ -126,14 +126,8 @@ export default function LayoutTab(props: LayoutTabProps) {
       <Show when={!hasHoles()}>
         <section class="params__section">
           <h2>Panel</h2>
-          <div class="readout">
-            <span>Panel depth</span>
-            <LengthReadout mm={props.panel.depth} />
-          </div>
-          <div class="readout">
-            <span>Panel width</span>
-            <LengthReadout mm={props.panel.width} />
-          </div>
+          <Readout label="Panel depth" mm={props.panel.depth} dimension="panelDepth" />
+          <Readout label="Panel width" mm={props.panel.width} dimension="panelWidth" />
           <p class="hint">No holes are cut. Depth is measured along the panel's slope.</p>
         </section>
       </Show>
@@ -219,7 +213,7 @@ export default function LayoutTab(props: LayoutTabProps) {
 
       <footer class="params__footer">
         <button type="button" class="button" onClick={resetLayout}>
-          Reset layout
+          Reset buttons
         </button>
       </footer>
     </>
